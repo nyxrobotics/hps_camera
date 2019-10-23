@@ -1,6 +1,8 @@
 <launch>
   <node name="ros_hps_camera" pkg="hps_camera" type="ros_hps_camera" output="screen">
     <param name="debugMode" type="bool" value="true" />
+    <param name="enableDepth" type="bool" value="true" />
+    <param name="enablePointCloud" type="bool" value="true" />
     <param name="hdrConfHdrMode" type="int" value="0" />
     <param name="hdrConfQualityOverexposed" type="double" value="500." />
     <param name="hdrConfQualityOverexposedSerious" type="double" value="800." />
@@ -8,7 +10,7 @@
     <param name="hdrConfQualityWeakSerious" type="double" value="80." />
     <param name="hdrConfSimpleHdrMaxIntegration" type="int" value="2000" />
     <param name="hdrConfSimpleHdrMinIntegration" type="int" value="200" />
-    <param name="hdrConfSuperHdrFrameNumber" type="int" value="3" />
+    <param name="hdrConfSuperHdrFrameNumber" type="int" value="10" />
     <param name="hdrConfSuperHdrMaxIntegration" type="int" value="20000" />
     <param name="hdrConfHdrDisableIntegrationTime" type="int" value="1000" />
     <param name="distanceFilterConfFilterType" type="int" value="0" />
