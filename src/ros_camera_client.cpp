@@ -19,6 +19,9 @@ HPS3D_HandleTypeDef handle;
 AsyncIObserver_t My_Observer;
 ObstacleConfigTypedef ObstacleConf;
 ros::Publisher camera_pub; //Global variable, because the observer callback function needs to be used
+bool device_usb_ = true;
+std::string device_usb_port_;
+std::string device_ethernet_port_;
 
 //The observer callback function
 void *User_Func(HPS3D_HandleTypeDef *handle, AsyncIObserver_t *event) {
@@ -97,7 +100,8 @@ void my_printf(char *str) {
 int main(int argc, char **argv) {
 
 	ros::init(argc, argv, "ros_camera_client");						//ros init
-	ros::NodeHandle n;							//Create a node
+	//ros::NodeHandle n ;							//Create a node
+	ros::NodeHandle n("~");
 	uint32_t a = 0;
 	char fileName[10][20];
 	uint32_t dev_cnt = 0;
@@ -120,16 +124,39 @@ int main(int argc, char **argv) {
 	HPS3D_SetDebugEnable(false);
 	HPS3D_SetDebugFunc(&my_printf);
 	//HPS3D_SetMeasurePacketType(ROI_DATA_PACKET);
-	int b = 0;
-	printf("select Transport type: 0:USB 1:Ethernet\n");
-	scanf("%d", &b);
-	if (b == 1) {
-		HPS3D_SetEthernetServerInfo(&handle, (char *) "192.168.0.10", 12345);
-	} else {
-		dev_cnt = HPS3D_GetDeviceList((char *) "/dev/", (char *) "ttyACM",
-				fileName);
-		handle.DeviceName = fileName[0];
+
+	//get rosparam
+	std::string device_connection_type;
+	n.param<std::string>("deviceConnectionType",device_connection_type, "usb");
+	n.param<std::string>("deviceUsbPort",device_usb_port_, "/dev/ttyACM0");
+	n.param<std::string>("deviceEthernetPort",device_ethernet_port_, "192.168.0.10");
+
+	printf("device_connection_type = %s\n",device_connection_type.c_str());
+	if("usb" == device_connection_type){
+		device_usb_ = true;
+		printf("device_port = %s\n",device_usb_port_.c_str());
+	}else{
+		device_usb_ = false;
+		printf("device_port = %s\n",device_ethernet_port_.c_str());
 	}
+
+	if (false == device_usb_) {
+		char* name_tmp = const_cast<char*>(device_ethernet_port_.c_str());
+		HPS3D_SetEthernetServerInfo(&handle, name_tmp, 12345);
+	} else {
+		char* name_tmp = const_cast<char*>(device_usb_port_.c_str());
+		handle.DeviceName = name_tmp;
+	}
+//	int b = 0;
+//	printf("select Transport type: 0:USB 1:Ethernet\n");
+//	scanf("%d", &b);
+//	if (b == 1) {
+//		HPS3D_SetEthernetServerInfo(&handle, (char *) "192.168.0.10", 12345);
+//	} else {
+//		dev_cnt = HPS3D_GetDeviceList((char *) "/dev/", (char *) "ttyACM",
+//				fileName);
+//		handle.DeviceName = fileName[0];
+//	}
 	do {
 		//Device Connection
 		ret = HPS3D_Connect(&handle);

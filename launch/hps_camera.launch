@@ -1,0 +1,10 @@
+<launch>
+  <node name="ros_hps_camera01" pkg="hps_camera" type="ros_camera_client" output="screen">
+    <param name="deviceConnectionType" type="string" value="usb" />
+    <param name="deviceUsbPort" type="string" value="/dev/ttyACM0" />
+  </node>
+  <node name="ros_hps_camera02" pkg="hps_camera" type="ros_camera_client" output="screen">
+    <param name="deviceConnectionType" type="string" value="usb" />
+    <param name="deviceUsbPort" type="string" value="/dev/ttyACM1" />
+  </node>
+</launch>
