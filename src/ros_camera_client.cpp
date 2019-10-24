@@ -11,6 +11,7 @@
 
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/CameraInfo.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -18,7 +19,9 @@
 HPS3D_HandleTypeDef handle;
 AsyncIObserver_t My_Observer;
 ObstacleConfigTypedef ObstacleConf;
-ros::Publisher camera_pub; //Global variable, because the observer callback function needs to be used
+ros::Publisher points_pub; //Global variable, because the observer callback function needs to be used
+ros::Publisher depth_pub;
+ros::Publisher depthinfo_pub;
 bool device_usb_ = true;
 std::string device_usb_port_;
 std::string device_ethernet_port_;
@@ -64,7 +67,72 @@ void *User_Func(HPS3D_HandleTypeDef *handle, AsyncIObserver_t *event) {
 				//Convert the cloud to ROS message
 				pcl::toROSMsg(cloud, output);
 				output.header.frame_id = "hps";
-				camera_pub.publish(output);
+				points_pub.publish(output);
+
+				//get depth image
+				sensor_msgs::Image outputImage;
+				outputImage.header.stamp = ros::Time::now();
+				outputImage.header.frame_id = "hps";
+				outputImage.height = RES_HEIGHT;
+				outputImage.width = RES_WIDTH;
+				outputImage.encoding = "16UC1";
+				outputImage.step = RES_WIDTH;
+				int numberOfPixels = RES_HEIGHT * RES_WIDTH;
+				int sizeOfOutputDataArray = numberOfPixels * 2;
+				outputImage.data.resize(sizeOfOutputDataArray);
+				int indexInputDataArray = 0;
+				for (int i = 0; i < sizeOfOutputDataArray; i += 2) {
+					// Extract the lower byte.
+					outputImage.data[i] =
+							(uint8_t) event->MeasureData.full_depth_data->distance[indexInputDataArray];
+					// Extract the upper byte.
+					outputImage.data[i + 1] =
+							(uint8_t) (event->MeasureData.full_depth_data->distance[indexInputDataArray]
+									>> 8);
+					indexInputDataArray += 1;
+				}
+				depth_pub.publish(outputImage);
+
+				//publish camera_info
+				sensor_msgs::CameraInfo cam_info;
+		        cam_info.header.stamp = outputImage.header.stamp;
+		        cam_info.header.seq = outputImage.header.seq;
+		        cam_info.height = outputImage.height;
+		        cam_info.width = outputImage.width;
+		        cam_info.K[0] = 102.39535500730614;
+		        cam_info.K[1] = 0.0;
+		        cam_info.K[2] = 80.5;
+		        cam_info.K[3] = 0.0;
+		        cam_info.K[4] = 102.39535500730614;
+		        cam_info.K[5] = 30.5;
+		        cam_info.K[6] = 0.0;
+		        cam_info.K[7] = 0.0;
+		        cam_info.K[8] = 1.0;
+
+		        cam_info.R[0] = 1.0;
+		        cam_info.R[1] = 0.0;
+		        cam_info.R[2] = 0.0;
+		        cam_info.R[3] = 0.0;
+		        cam_info.R[4] = 1.0;
+		        cam_info.R[5] = 0.0;
+		        cam_info.R[6] = 0.0;
+		        cam_info.R[7] = 0.0;
+		        cam_info.R[8] = 1.0;
+
+		        cam_info.P[0] = 102.39535500730614;
+		        cam_info.P[1] = 0;
+		        cam_info.P[2] = 80.5;
+		        cam_info.P[3] = 0;
+		        cam_info.P[4] = 0;
+		        cam_info.P[5] = 102.39535500730614;
+		        cam_info.P[6] =  30.5;
+		        cam_info.P[7] = 0;
+		        cam_info.P[8] = 0;
+		        cam_info.P[9] = 0;
+		        cam_info.P[10] = 1;
+		        cam_info.P[11] = 0;
+
+		        depthinfo_pub.publish(cam_info);
 
 			}
 			break;
@@ -118,7 +186,9 @@ int main(int argc, char **argv) {
 	}
 
 	//Create a topic
-	camera_pub = n.advertise<sensor_msgs::PointCloud2>("output", 1);
+	points_pub = n.advertise<sensor_msgs::PointCloud2>("points", 1);
+	depth_pub = n.advertise<sensor_msgs::Image>("depth",1);
+	depthinfo_pub = n.advertise<sensor_msgs::CameraInfo>("camera_info", 1);
 
 	//set debug enable and install printf log callback function
 	HPS3D_SetDebugEnable(false);
