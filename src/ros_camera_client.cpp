@@ -25,6 +25,8 @@ ros::Publisher depthinfo_pub;
 bool device_usb_ = true;
 std::string device_usb_port_;
 std::string device_ethernet_port_;
+std::string depth_frame_id_;
+std::string pointcloud_frame_id_;
 
 //The observer callback function
 void *User_Func(HPS3D_HandleTypeDef *handle, AsyncIObserver_t *event) {
@@ -45,18 +47,24 @@ void *User_Func(HPS3D_HandleTypeDef *handle, AsyncIObserver_t *event) {
 				for (size_t i = 0; i < cloud.points.size(); i++) {
 					if (event->MeasureData.point_cloud_data[0].point_data[i].z
 							< LOW_AMPLITUDE) {
-						cloud.points[i].x =
+						// cloud.points[i].x =
+						// 		event->MeasureData.point_cloud_data[0].point_data[i].x
+						// 				/ 1000.0;
+						// cloud.points[i].y =
+						// 		event->MeasureData.point_cloud_data[0].point_data[i].y
+						// 				/ 1000.0;
+						// cloud.points[i].z =
+						// 		event->MeasureData.point_cloud_data[0].point_data[i].z
+						// 				/ 1000.0;
+						cloud.points[i].y =
 								event->MeasureData.point_cloud_data[0].point_data[i].x
 										/ 1000.0;
-						cloud.points[i].y =
+						cloud.points[i].z =
 								event->MeasureData.point_cloud_data[0].point_data[i].y
 										/ 1000.0;
-						cloud.points[i].z =
+						cloud.points[i].x =
 								event->MeasureData.point_cloud_data[0].point_data[i].z
 										/ 1000.0;
-						//cloud.points[i].x  = i%cloud.width - cloud.width/2;
-						//cloud.points[i].y = i/cloud.height - cloud.height/2;
-						//cloud.points[i].z = event->MeasureData.full_depth_data->distance[i]/1000.0;
 					} else {
 						cloud.points[i].x = 0;
 						cloud.points[i].y = 0;
@@ -66,13 +74,13 @@ void *User_Func(HPS3D_HandleTypeDef *handle, AsyncIObserver_t *event) {
 				}
 				//Convert the cloud to ROS message
 				pcl::toROSMsg(cloud, output);
-				output.header.frame_id = "hps";
+				output.header.frame_id = pointcloud_frame_id_;
 				points_pub.publish(output);
 
 				//get depth image
 				sensor_msgs::Image outputImage;
 				outputImage.header.stamp = ros::Time::now();
-				outputImage.header.frame_id = "hps";
+				outputImage.header.frame_id = depth_frame_id_;
 				outputImage.height = RES_HEIGHT;
 				outputImage.width = RES_WIDTH;
 				outputImage.encoding = "16UC1";
@@ -200,6 +208,8 @@ int main(int argc, char **argv) {
 	n.param<std::string>("deviceConnectionType",device_connection_type, "usb");
 	n.param<std::string>("deviceUsbPort",device_usb_port_, "/dev/ttyACM0");
 	n.param<std::string>("deviceEthernetPort",device_ethernet_port_, "192.168.0.10");
+	n.param<std::string>("depthImageFrameId",depth_frame_id_, "hps");
+	n.param<std::string>("ponitCloudFrameId",pointcloud_frame_id_, "hps");
 
 	printf("device_connection_type = %s\n",device_connection_type.c_str());
 	if("usb" == device_connection_type){
