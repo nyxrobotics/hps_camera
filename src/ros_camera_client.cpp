@@ -90,13 +90,14 @@ void *User_Func(HPS3D_HandleTypeDef *handle, AsyncIObserver_t *event) {
 				outputImage.data.resize(sizeOfOutputDataArray);
 				int indexInputDataArray = 0;
 				for (int i = 0; i < sizeOfOutputDataArray; i += 2) {
+					uint16_t measureDataInt = event->MeasureData.full_depth_data->distance[indexInputDataArray];
+					if(measureDataInt > 0xFF00){
+						measureDataInt = 0;
+					}
 					// Extract the lower byte.
-					outputImage.data[i] =
-							(uint8_t) event->MeasureData.full_depth_data->distance[indexInputDataArray];
+					outputImage.data[i] = (uint8_t) measureDataInt;
 					// Extract the upper byte.
-					outputImage.data[i + 1] =
-							(uint8_t) (event->MeasureData.full_depth_data->distance[indexInputDataArray]
-									>> 8);
+					outputImage.data[i + 1] = (uint8_t) (measureDataInt >> 8);
 					indexInputDataArray += 1;
 				}
 				depth_pub.publish(outputImage);
@@ -107,6 +108,7 @@ void *User_Func(HPS3D_HandleTypeDef *handle, AsyncIObserver_t *event) {
 		        cam_info.header.seq = outputImage.header.seq;
 		        cam_info.height = outputImage.height;
 		        cam_info.width = outputImage.width;
+				cam_info.header.frame_id = depth_frame_id_;
 		        cam_info.K[0] = 102.39535500730614;
 		        cam_info.K[1] = 0.0;
 		        cam_info.K[2] = 80.5;
